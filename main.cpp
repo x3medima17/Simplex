@@ -189,5 +189,6 @@ int main() {
         printf("iteration: %d   x=%f y=%f    x=%f y=%f    x=%f y=%f    fl=%f  fh=%f\n",k,xh.x[0],xh.x[1],xg.x[0],xg.x[1],xl.x[0],xl.x[1],fl,fh);
 
     }
+    
     return 0;
 }
