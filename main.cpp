@@ -115,8 +115,6 @@ int main() {
         cout<<progress<<endl;
     }
     cout << X;
-    assert(cmpd(X.get(1, 1), 1, eps));
-    assert(cmpd(X.get(1, 2), 1, eps));
 
 
     return 0;
