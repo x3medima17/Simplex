@@ -9,7 +9,7 @@ const int N = 2;
 const double alpha = 1;
 const double beta = 0.5;
 const double gama = 2;
-
+const double eps = 0.0001;
 
 Matrix fx(Matrix &M) {
     int n = M.size()[0];
@@ -27,15 +27,18 @@ int cmp(const vector<double> &A, const vector<double> &B) {
     return A[m - 1] > B[m - 1];
 }
 
+bool cmpd(double a, double b, double eps) {
+    return abs(a - b) < eps;
+}
+
 int main() {
     srand(time(NULL));
     Matrix X(N + 1, N);
     Matrix y(N + 1, 1);
-    X.randomize(0, 1);
+    X.randomize(0, 2);
 
     double progress = 1;
-    while(progress >= 0.000001)
-    {
+    while (progress >= 0.000000000001) {
 
         y = fx(X);
         Matrix Data = X || y;
@@ -54,6 +57,7 @@ int main() {
 
         Matrix xl = X.slice(N + 1, N + 1, 1, -1);
         double fl = fx(xl).to_double();
+        double flp = fl;
 
         Matrix xc = X.slice(2, N + 1, 1, -1).col_sum() * ((double) 1 / N);
         double fc = fx(xc).to_double();
@@ -88,32 +92,29 @@ int main() {
             Matrix xs = xh * beta + xc * (1 - beta);
             double fs = fx(xs).to_double();
 
-            if(fs<fh){
+            if (fs < fh) {
                 xh = xs;
                 fh = fx(xh).to_double();
                 step = 8;
             }
-            if(step != 8){
-                if(fs>fh){
+            if (step != 8) {
+                if (fs > fh) {
                     //shrink
-                    for(int i=1;i<=N;++i)
-                        for(int j=1; j<= N; ++j)
-                            X.set(i,j,xl.get(1,j)+(X.get(i,j)-xl.get(1,j)/2));
+                    for (int i = 1; i <= N; ++i)
+                        for (int j = 1; j <= N; ++j)
+                            X.set(i, j, xl.get(1, j) + (X.get(i, j) - xl.get(1, j) / 2));
                 }
             }
         }
-        X.set_row(xh,1);
-        X.set_row(xg,2);
-        X.set_row(xl,N+1);
+        X.set_row(xh, 1);
+        X.set_row(xg, 2);
+        X.set_row(xl, N + 1);
         y = fx(X);
-        progress = fhp-fh;
-        cout<<fl<<" "<<fh<<" "<<progress<<endl;
+        progress = (fhp - fh) + (flp - fl);
+        cout << fl << " " << fh << " "  << endl;
+        cout<<progress<<endl;
     }
-
-    cout<<X;
-
-//printf("iteration: %d   x=%f y=%f    x=%f y=%f    x=%f y=%f    fl=%f  fh=%f\n",k,xh.x[0],xh.x[1],xg.x[0],xg.x[1],xl.x[0],xl.x[1],fl,fh);
-//cout<<Data;
+    cout << X;
 
 
     return 0;
