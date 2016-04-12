@@ -9,7 +9,7 @@ const int N = 2;
 const double alpha = 1;
 const double beta = 0.5;
 const double gama = 2;
-
+const double eps = 0.0001;
 
 Matrix fx(Matrix &M) {
     int n = M.size()[0];
@@ -27,6 +27,11 @@ int cmp(const vector<double> &A, const vector<double> &B) {
     return A[m - 1] > B[m - 1];
 }
 
+bool cmpd(double a, double b,double eps)
+{
+    return abs(a-b) < eps;
+}
+
 int main() {
     srand(time(NULL));
     Matrix X(N + 1, N);
@@ -34,7 +39,7 @@ int main() {
     X.randomize(0, 1);
 
     double progress = 1;
-    while(progress >= 0.000001)
+    while(progress >= 0.000000001)
     {
 
         y = fx(X);
@@ -109,11 +114,10 @@ int main() {
         progress = fhp-fh;
         cout<<fl<<" "<<fh<<" "<<progress<<endl;
     }
-
     cout<<X;
+    assert(cmpd(X.get(1,1),1,eps));
+    assert(cmpd(X.get(1,2),1,eps));
 
-//printf("iteration: %d   x=%f y=%f    x=%f y=%f    x=%f y=%f    fl=%f  fh=%f\n",k,xh.x[0],xh.x[1],xg.x[0],xg.x[1],xl.x[0],xl.x[1],fl,fh);
-//cout<<Data;
 
 
     return 0;
