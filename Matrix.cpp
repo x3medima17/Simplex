@@ -9,9 +9,13 @@
 #include <fstream>
 #include <ostream>
 #include <iostream>
-
+#include <algorithm>
 
 Matrix::Matrix() {
+
+}
+
+Matrix::~Matrix() {
 
 }
 
@@ -21,11 +25,21 @@ Matrix::Matrix(int n, int m) {
     data.resize(n, std::vector<double>(m, 0));
 }
 
+double Matrix::get(int i, int j) {
+    --i;
+    --j;
+    return data[i][j];
+}
 
 void Matrix::set_all(double val) {
     for (int i = 0; i < n; i++)
         for (int j = 0; j < m; j++)
             data[i][j] = val;
+}
+
+template <typename Comparator>
+void Matrix::sort(Comparator cmp) {
+    std::sort(data.begin(), data.end(),cmp);
 }
 
 std::vector<int> Matrix::size() {
@@ -36,7 +50,16 @@ std::vector<int> Matrix::size() {
 }
 
 void Matrix::set(int i, int j, double val) {
+    --i;
+    --j;
+    //std::cout<<size()[0]<<" "<<size()[1]<<std::endl;
     this->data[i][j] = val;
+}
+
+void Matrix::set_row(Matrix &M, int row) {
+    for(int i=1;i<=m;++i){
+        set(row,i,M.get(1,i));
+    }
 }
 
 void Matrix::load_from_file(std::string src) {
@@ -57,7 +80,7 @@ Matrix Matrix::transpose() {
 }
 
 Matrix Matrix::vectorize() {
-    Matrix tmp(n *m,1);
+    Matrix tmp(n * m, 1);
 
     for (int i = 0; i < n; i++)
         for (int j = 0; j < m; j++)
@@ -82,13 +105,23 @@ double Matrix::maxx() {
     return maxx;
 }
 
-    double Matrix::sum() {
+double Matrix::sum() {
     double s = 0;
     for (int i = 0; i < n; i++)
         for (int j = 0; j < m; j++)
             s += data[i][j];
     return s;
 }
+
+Matrix Matrix::col_sum(){
+    double s= 0;
+    Matrix R(1,m);
+    R.set_all(0);
+    for(int i=1;i<=m;i++){
+        R.set(1,i,slice(1,-1,i,i).sum());
+    }
+    return R;
+};
 
 Matrix Matrix::slice(int a, int b, int c, int d) {
     if (a == -1)
@@ -119,14 +152,30 @@ void Matrix::randomize() {
             data[i][j] = ((double) rand() / (RAND_MAX));
 }
 
+double Matrix::d_random(double d_min, double d_max) {
+    double d = (double) rand() / RAND_MAX;
+    return d_min + d * (d_max - d_min);
+}
 
+void Matrix::randomize(double d_min, double d_max) {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            data[i][j] = d_random(d_min, d_max);
+}
+
+double Matrix::to_double() {
+    if (size()[0] == 1 && size()[1] == 1)
+        return data[0][0];
+    else
+        std::cout << "Alarma!\n";
+}
 
 
 std::ostream &operator<<(std::ostream &os, const std::vector<int> &V) {
     std::cout << V[0] << " " << V[1] << std::endl;
 }
 
-std::ostream &operator<<(std::ostream &os, const std::vector <std::vector<double>> &V) {
+std::ostream &operator<<(std::ostream &os, const std::vector<std::vector<double>> &V) {
     int n = V.size();
     int m = V[0].size();
 
@@ -225,20 +274,23 @@ Matrix operator*(const Matrix A, const T val) {
     return tmp;
 }
 
-Matrix operator||(const Matrix A, const Matrix B) {
+Matrix operator||(const Matrix &A, const Matrix &B) {
     int an = A.n;
     int am = A.m;
     int bn = B.n;
     int bm = B.m;
     assert(an == bn);
     Matrix tmp(an, am + bm);
-    for (int i = 0; i < an; i++)
-        for (int j = 0; j < am + bm; j++) {
-            if (j >= am)
-                tmp.data[i][j + am - 1] = B.data[i][j - am];
-            else
-                tmp.data[i][j] = A.data[i][j];
+    for (int i = 0; i < an; i++) {
+        for (int j = 0; j < am; j++) {
+            tmp.data[i][j] = A.data[i][j];
         }
+        int k = 0;
+        for (int j = am; j < am + bm; j++) {
+            tmp.data[i][j] = B.data[i][k++];
+        }
+
+    }
     return tmp;
 }
 

@@ -1,12 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include <utility>
-#include <algorithm>
-#include <ctime>
-#include <cstdlib>
-#include <cassert>
-
+#include "Matrix.cpp"
 
 using namespace std;
 
@@ -14,181 +9,113 @@ const int N = 2;
 const double alpha = 1;
 const double beta = 0.5;
 const double gama = 2;
+const double eps = 0.0001;
 
-struct point {
-    vector<double> x;
-    double y;
-};
+Matrix fx(Matrix &M) {
+    int n = M.size()[0];
+    Matrix R(n, 1);
 
-typedef vector<point> Simplex;
-
-double fx(vector<double> &V) {
-    return pow(100 * (V[1] - V[0] * V[0]), 2) + pow(1 - V[0], 2);
+    for (size_t i = 1; i <= n; i++) {
+        double r = 100 * pow((M.get(i, 2) - M.get(i, 1) * M.get(i, 1)), 2) + pow(1 - M.get(i, 1), 2);
+        R.set(i, 1, r);
+    }
+    return R;
 }
 
-int cmp(const point &a, const point &b) {
-    return a.y > b.y;
+int cmp(const vector<double> &A, const vector<double> &B) {
+    int m = A.size();
+    return A[m - 1] > B[m - 1];
 }
 
-
-double d_random(double d_min, double d_max) {
-    double d = (double) rand() / RAND_MAX;
-
-    return d_min + d * (d_max - d_min);
-}
-
-
-void generate_points(vector<point> &V) {
-    V.resize(N + 1);
-    for (size_t i = 0; i < N + 1; i++) {
-        V[i].x.resize(N);
-        for (size_t j = 0; j < N; j++) {
-            V[i].x[j] = d_random(-20, 20);
-        }
-        V[i].y = fx(V[i].x);
-    }
-
-}
-
-void print_points(vector<point> &V) {
-    for (int i = 0; i < V.size(); i++) {
-        for (int j = 0; j < V[i].x.size(); j++)
-            cout << V[i].x[j] << " ";
-        cout << ": " << V[i].y << endl;
-    }
-}
-
-point compute_center(vector<point> &V) {
-    point result;
-    result.x.resize(N);
-    //init
-    for (int i = 0; i < result.x.size(); i++) {
-        result.x[i] = 0;
-    }
-    result.y = 0;
-    for (int i = 1; i < result.x.size(); i++) {
-        for (int j = 0; j < V[i].x.size(); j++)
-            result.x[i] += V[i].x[j];
-    }
-    //divide
-    for (int i = 0; i < result.x.size(); i++)
-        result.x[i] /= N;
-    return result;
-}
-
-point compute_mirror(point xh, point xc) {
-    //multiply xc and xh
-    for (int i = 0; i < xc.x.size(); i++) {
-        xc.x[i] *= 1 + alpha;
-        xh.x[i] *= alpha;
-    }
-    //substract
-    for (int i = 0; i < xc.x.size(); i++) {
-        xc.x[i] -= xh.x[i];
-    }
-    return xc;
-}
-
-point compute_xe(point xc, point xr) {
-    //multiply xc and xr
-    for (int i = 0; i < xc.x.size(); i++) {
-        xc.x[i] *= (1 - gama);
-        xr.x[i] *= gama;
-    }
-    //add
-    for (int i = 0; i < xc.x.size(); i++) {
-        xc.x[i] += xr.x[i];
-    }
-    cout << xc.x.size() << endl;
-    return xc;
-}
-
-point compute_xs(point xh, point xc) {
-    //multiply xc and xh
-    for (int i = 0; i < xc.x.size(); i++) {
-        xh.x[i] *= beta;
-        xc.x[i] *= (1 - beta);
-        xh.x[i] += xc.x[i];
-    }
-    return xh;
-}
-
-point shrink(point xi, point xl) {
-    for (int i = 0; i < N; i++) {
-        xi.x[i] = xl.x[i] + (xi.x[i]-xl.x[i])/2;
-    }
-    return xi;
+bool cmpd(double a, double b, double eps) {
+    return abs(a - b) < eps;
 }
 
 int main() {
-
-    vector<point> V;
-
     srand(time(NULL));
-    generate_points(V);
+    Matrix X(N + 1, N);
+    Matrix y(N + 1, 1);
+    X.randomize(0, 2);
 
-    print_points(V);
-    for(int k = 0;k<10;k++)
-    {
+    double progress = 1;
+    while (progress >= 0.000000000001) {
 
-        sort(V.begin(), V.end(), cmp);
+        y = fx(X);
+        Matrix Data = X || y;
 
-        point xh = V[0];
-        point xg = V[1];
-        point xl = V.back();
-        point xc = compute_center(V);
-        point xr = compute_mirror(xh, xc);
-        int l = V.size() - 1;
 
-        double fr = fx(xr.x);
-        double fh = fx(xh.x);
-        double fg = fx(xg.x);
-        double fl = fx(xl.x);
+        Data.sort(cmp);
+        X = Data.slice(1, N + 1, 1, N);
+        y = Data.slice(1, N + 1, N + 1, -1);
 
-        //5
+        Matrix xh = X.slice(1, 1, 1, -1);
+        double fh = fx(xh).to_double();
+        double fhp = fh;
+
+        Matrix xg = X.slice(2, 2, 1, -1);
+        double fg = fx(xg).to_double();
+
+        Matrix xl = X.slice(N + 1, N + 1, 1, -1);
+        double fl = fx(xl).to_double();
+        double flp = fl;
+
+        Matrix xc = X.slice(2, N + 1, 1, -1).col_sum() * ((double) 1 / N);
+        double fc = fx(xc).to_double();
+
+        Matrix xr = xc * (1 + alpha) - xh * alpha;
+        double fr = fx(xr).to_double();
+
+        int step = 0;
         if (fr < fl) {
-            point xe = compute_xe(xc, xr);
-            double fe = fx(xe.x);
-            if (fe < fr) {
+            Matrix xe = xc * (1 - gama) + xr * gama;
+            double fe = fx(xe).to_double();
+            if (fe < fl) {
                 xh = xe;
-            }
-            else if (fr < fe) {
+                fh = fx(xh).to_double();
+            } else if (fe > fl) {
                 xh = xr;
+                fh = fx(xh).to_double();
             }
-        }
-        else if (fl < fr && fr < fg) {
+            step = 8;
+        } else if (fl < fr && fr < fg) {
             xh = xr;
-        }
-        else if (fg < fr && fr < fh) {
+            fh = fx(xh).to_double();
+            step = 8;
+        } else if (fh > fr && fr > fg) {
             swap(xr, xh);
             swap(fr, fh);
+            step = 5;
+        } else if (fr > fh) {
+            step = 5;
         }
-//        assert(fl < fg && fg < fh && fh < fr);
+        if (step == 5) {
+            Matrix xs = xh * beta + xc * (1 - beta);
+            double fs = fx(xs).to_double();
 
-        //6
-        point xs = compute_xs(xh, xc);
-        double fs = fx(xs.x);
-        //7
-        if (fs < fh) {
-            xh = xs;
-        }
-            //8
-        else if (fs > fh) {
-            //shrink
-            for (int j = 0; j < N; j++) {
-                if (j != l) {
-                    V[j] = shrink(V[j], V[l]);
+            if (fs < fh) {
+                xh = xs;
+                fh = fx(xh).to_double();
+                step = 8;
+            }
+            if (step != 8) {
+                if (fs > fh) {
+                    //shrink
+                    for (int i = 1; i <= N; ++i)
+                        for (int j = 1; j <= N; ++j)
+                            X.set(i, j, xl.get(1, j) + (X.get(i, j) - xl.get(1, j) / 2));
                 }
             }
         }
-
-        V[0] = xh;
-        V[1] = xg;
-        V[V.size()-1] = xl;
-
-        printf("iteration: %d   x=%f y=%f    x=%f y=%f    x=%f y=%f    fl=%f  fh=%f\n",k,xh.x[0],xh.x[1],xg.x[0],xg.x[1],xl.x[0],xl.x[1],fl,fh);
-
+        X.set_row(xh, 1);
+        X.set_row(xg, 2);
+        X.set_row(xl, N + 1);
+        y = fx(X);
+        progress = (fhp - fh) + (flp - fl);
+        cout << fl << " " << fh << " "  << endl;
+        cout<<progress<<endl;
     }
-    
+    cout << X;
+
+
     return 0;
 }
